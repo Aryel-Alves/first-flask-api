@@ -21,9 +21,9 @@ ma = Marshmallow(app)
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True)
-    description = db.Collumn(db.String(200))
+    description = db.Column(db.String(200))
     price = db.Column(db.Float)
-    qty = db.COlumn(db.Integer)
+    qty = db.Column(db.Integer)
 
     def __init__(self, name, description, price, qty):
         self.name = name
@@ -40,6 +40,66 @@ class ProductSchema(ma.Schema):
 product_schema = ProductSchema(strict=True)
 products_schema = ProductSchema(many=True, strict=True)
 
+@app.route('/', methods=['GET'])
+def get():
+    return '{"product": "http://127.0.0.1:4996/product"}'
+
+# Create a Product
+@app.route('/product', methods=['POST'])
+def add_product():
+    name = request.json['name']
+    description = request.json['description']
+    price = request.json['price']
+    qty = request.json['qty']
+
+    new_product = Product(name, description, price, qty)
+
+    db.session.add(new_product)
+    db.session.commit()
+
+    return product_schema.jsonify(new_product)
+
+# Get All products 
+@app.route('/product', methods=['GET'])
+def get_all_products():
+    all_products = Product.query.all()
+    result = products_schema.dump(all_products)
+    return jsonify(result.data)
+
+# Get single product
+@app.route('/product/<id>', methods=['GET'])
+def get_product(id):
+    product = Product.query.get(id)
+    return product_schema.jsonify(product)
+
+# Update a Product
+@app.route('/product/<id>', methods=['PUT'])
+def update_product(id):
+    product = Product.query.get(id)
+
+    name = request.json['name']
+    description = request.json['description']
+    price = request.json['price']
+    qty = request.json['qty']
+
+    product.name = name
+    product.description = description
+    product.price = price
+    product.qty = qty
+    
+    db.session.commit()
+
+    return product_schema.jsonify(product)
+
+# Remove single product
+@app.route('/product/<id>', methods=['DELETE'])
+def delete_product(id):
+    product = Product.query.get(id)
+    db.session.delete(product)
+    db.session.commit()
+    
+    return product_schema.jsonify(product)
+
 # Run server
 if __name__ == '__main__':
-    app.run(port=4996)
+    app.run(port=4996, debug=True)
